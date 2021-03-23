@@ -6,7 +6,7 @@ import tarikdev.app.testproject.model.Comment
 
 class CommentsViewModel: ViewModel() {
 
-    val comments = MutableLiveData<Comment>()
+    val comments = MutableLiveData<List<Comment>>()
 
     fun getComments(fromId: Int, toId: Int) {
 
