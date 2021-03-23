@@ -41,7 +41,7 @@ object RetrofitService {
         .addInterceptor(baseInterceptor)
         .build()
 
-    fun retrofitService(): NetworkApi {
+    fun getApi(): NetworkApi {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())

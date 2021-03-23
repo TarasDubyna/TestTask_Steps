@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_first_screen.*
 import tarikdev.app.testproject.R
@@ -33,10 +34,17 @@ class FirstScreenFragment : Fragment() {
         super.onActivityCreated(savedInstanceState)
 
         viewModel = ViewModelProvider(requireActivity()).get(CommentsViewModel::class.java)
+        viewModel.getAllComments().observe(viewLifecycleOwner, {
+            Log.e(TAG, "onActivityCreated: ${it.status.name}")
+        })
+
 
         get_comments_btn.setOnClickListener {
             validateInputData()?.let {
-                viewModel.getComments(it.first, it.second)
+                //viewModel.getComments(it.first, it.second)
+                //viewModel.getAllComments().observe(this, {})
+                //findNavController().navigate(R.id.action_firstScreenFragment_to_secondScreenFragment)
+                findNavController().navigate(R.id.secondScreenFragment)
             }
         }
 
