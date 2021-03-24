@@ -59,9 +59,9 @@ class FirstScreenFragment : Fragment() {
         })
 
         get_comments_btn.setOnClickListener {
-            viewModel.getComments()
-            validateInputData()?.let {
-                viewModel.getComments()
+            validateInputData()?.let { rangePair ->
+                viewModel.setCommentsRange(rangePair.first, rangePair.second)
+                viewModel.getCommentsFirstPage()
             }
         }
 
@@ -89,10 +89,10 @@ class FirstScreenFragment : Fragment() {
             return if (higher <= lower) {
                 Log.e(TAG, "validateInputData: lower=$lower, higher=$higher - wrong validation, lower > higher")
                 Snackbar.make(higher_bound_et, "Higher bound should be higher then lower bound", Snackbar.LENGTH_SHORT).show()
-                Pair(lower, higher)
+                null
             } else {
                 Log.d(TAG, "validateInputData: lower=$lower, higher=$higher")
-                null
+                Pair(lower, higher)
             }
 
         }

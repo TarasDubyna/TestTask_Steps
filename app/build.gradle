@@ -66,5 +66,8 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:2.3.4"
     implementation "androidx.navigation:navigation-ui-ktx:2.3.4"
 
+    //Recycler with pagination
+    implementation 'com.github.markomilos:paginate:1.0.0'
+
 
 }

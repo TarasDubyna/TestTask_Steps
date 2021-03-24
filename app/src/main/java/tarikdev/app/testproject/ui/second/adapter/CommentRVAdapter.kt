@@ -20,6 +20,12 @@ class CommentRVAdapter: RecyclerView.Adapter<CommentVH>() {
 
     override fun getItemCount(): Int = comments.size
 
+    fun addComments(comments: List<Comment>) {
+        val updFirstPos = comments.lastIndex
+        this.comments.addAll(comments)
+        notifyItemRangeInserted(updFirstPos, this.comments.lastIndex)
+    }
+
     fun update(comments: List<Comment>) {
         this.comments.clear()
         this.comments.addAll(comments)
