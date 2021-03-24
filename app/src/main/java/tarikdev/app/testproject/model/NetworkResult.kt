@@ -7,12 +7,11 @@ data class NetworkResult<out T>(val status: Status, val data: T?, val message: S
         fun <T> success(data: T): NetworkResult<T> =
             NetworkResult(status = Status.SUCCESS, data = data, message = null)
 
-        fun <T> error(data: T?, message: String): NetworkResult<T> =
-            NetworkResult(status = Status.ERROR, data = data, message = message)
+        fun <T> error(message: String): NetworkResult<T> =
+            NetworkResult(status = Status.ERROR, data = null, message = message)
 
-        fun <T> loading(data: T?): NetworkResult<T> =
-
-            NetworkResult(status = Status.LOADING, data = data, message = null)
+        fun <T> loading(): NetworkResult<T> =
+            NetworkResult(status = Status.LOADING, data = null, message = null)
 
     }
 

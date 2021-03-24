@@ -14,6 +14,7 @@ import tarikdev.app.testproject.model.NetworkResult
 import tarikdev.app.testproject.network.NetworkRepository
 import tarikdev.app.testproject.network.RetrofitService
 import tarikdev.app.testproject.ui.first.FirstScreenFragment
+import tarikdev.app.testproject.ui.second.adapter.CommentRVAdapter
 
 class CommentsViewModel: ViewModel() {
     
@@ -23,16 +24,62 @@ class CommentsViewModel: ViewModel() {
 
     private val repository = NetworkRepository(RetrofitService.getApi())
 
-    private var currentPage: Int = 0
-    fun getCurrentPage(): Int = currentPage
-    val rangePages: MutableList<Pair<Int, Int>> = mutableListOf()
-
     val commentsResult = MutableLiveData<NetworkResult<List<Comment>>>()
 
-    fun setCommentsRange(fromId: Int, toId: Int) {
-        Log.d(TAG, "setCommentsRange: fromId=$fromId, toId=$toId")
+    val currentPage = MutableLiveData<Int>()
+    fun getPageCount(): Int = rangePages.size
 
-        this.currentPage = 0
+    private val rangePages: MutableList<Pair<Int, Int>> = mutableListOf()
+    fun getPageRange(page: Int): Pair<Int, Int> = rangePages[page]
+    fun getCurrentPageRange(): Pair<Int, Int> = rangePages[currentPage.value?: 0]
+
+
+    /*fun getComments(fromId: Int, toId: Int) {
+        Log.d(TAG, "getComments: fromId=$fromId, toId=$toId")
+        load(fromId, toId)
+    }*/
+
+    fun getComments(page: Int) {
+
+        if (commentsResult.value?.status == NetworkResult.Status.LOADING) return
+
+        val pageRange = getPageRange(page)
+        Log.d(TAG, "getComments: page=$page, range=${pageRange}")
+        load(pageRange.first, pageRange.second)
+    }
+
+    private fun load(from: Int, to: Int) {
+
+        commentsResult.value = NetworkResult.loading()
+
+        repository.getComments(from, to).enqueue(object : Callback<List<Comment>> {
+
+            override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
+
+                Log.e(TAG, "getComments: onResponse: ${response.body()!!.map { it.id }.toString()}")
+
+                commentsResult.value =
+                    if (response.body() == null) NetworkResult.success(data = listOf())
+                    else NetworkResult.success(data = response.body()!!.sortedBy { it.id })
+
+                val newPage = currentPage.value?.plus(1)
+                currentPage.value = newPage
+            }
+
+            override fun onFailure(call: Call<List<Comment>>, t: Throwable) {
+                Log.e(TAG, "getComments: onFailure: ${t.message}")
+                commentsResult.value = NetworkResult.error(t.message.toString())
+            }
+
+        })
+    }
+
+    var range: Pair<Int, Int> = Pair(0, 0)
+    fun initRange(fromId: Int, toId: Int) {
+        Log.d(TAG, "changeRange: [$fromId,$toId], set currentPage=0")
+        range = Pair(fromId, toId)
+
+        currentPage.value = 0
 
         rangePages.clear()
         rangePages.addAll(
@@ -41,104 +88,7 @@ class CommentsViewModel: ViewModel() {
                 val to = if (it + 9 > toId) toId else it + 9
                 Pair(from, to)
             })
+        Log.d(TAG, "changeRange: rangePages=${rangePages.toString()}")
     }
-
-    fun getCommentsFirstPage() {
-        currentPage = 0
-        val range = rangePages[currentPage]
-        load(range.first, range.second)
-    }
-
-    fun getCommentsNextPage(): Boolean {
-        val page = currentPage + 1
-        if (page >= rangePages.lastIndex) return false
-
-        val range = rangePages[page]
-        Log.e(TAG, "getCommentsNextPage: nextPage=$page, maxPage=${rangePages.lastIndex}, range=[${range.first},${range.second}]")
-
-        load(range.first, range.second)
-
-        return true
-
-    }
-
-    private fun load(from: Int, to: Int) {
-        commentsResult.value = NetworkResult.loading(data = null)
-
-        repository.getComments(from, to).enqueue(object : Callback<List<Comment>> {
-            override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
-                Log.e(TAG, "onResponse: ")
-                commentsResult.value =
-                    if (response.body() == null) NetworkResult.error(
-                        data = null,
-                        "Response body - null"
-                    )
-                    else {
-                        currentPage++
-                        NetworkResult.success(data = response.body()!!)
-                    }
-            }
-
-            override fun onFailure(call: Call<List<Comment>>, t: Throwable) {
-                Log.e(TAG, "onFailure: ")
-                commentsResult.value = NetworkResult.error(data = null, t.message.toString())
-            }
-        })
-    }
-
-    /*fun getComments(page: Int) {
-
-        var from = (page - 1) * 10 + 1
-        var to = page * 10
-
-        Log.e(TAG, "getComments: fromId=$fromId, toId=$toId, page=$page")
-
-
-
-        commentsResult.value = NetworkResult.loading(data = null)
-
-        repository.getComments(fromId, toId, page).enqueue(object : Callback<List<Comment>> {
-            override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
-                Log.e(TAG, "onResponse: ")
-                commentsResult.value =
-                    if (response.body() == null) NetworkResult.error(
-                        data = null,
-                        "Response body - null"
-                    )
-                    else NetworkResult.success(data = response.body()!!)
-            }
-
-            override fun onFailure(call: Call<List<Comment>>, t: Throwable) {
-                Log.e(TAG, "onFailure: ")
-                commentsResult.value = NetworkResult.error(data = null, t.message.toString())
-            }
-        })
-
-    }*/
-
-/*
-    fun getAllComments() {
-
-        Log.e(TAG, "getAllComments: ", )
-        commentsResult.value = NetworkResult.loading(data = null)
-
-        repository.getAllComments().enqueue(object : Callback<List<Comment>> {
-            override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
-                Log.e(TAG, "onResponse: ")
-                commentsResult.value =
-                    if (response.body() == null) NetworkResult.error(
-                        data = null,
-                        "Response body - null"
-                    )
-                    else NetworkResult.success(data = response.body()!!)
-            }
-
-            override fun onFailure(call: Call<List<Comment>>, t: Throwable) {
-                Log.e(TAG, "onFailure: ")
-                commentsResult.value = NetworkResult.error(data = null, t.message.toString())
-            }
-        })
-    }*/
-
 
 }

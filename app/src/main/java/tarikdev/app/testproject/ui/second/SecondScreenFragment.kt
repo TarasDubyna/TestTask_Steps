@@ -14,6 +14,7 @@ import com.paginate.recycler.LoadingListItemCreator
 import com.paginate.recycler.LoadingListItemSpanLookup
 import kotlinx.android.synthetic.main.fragment_second_screen.*
 import tarikdev.app.testproject.R
+import tarikdev.app.testproject.model.Comment
 import tarikdev.app.testproject.model.NetworkResult
 import tarikdev.app.testproject.ui.CommentsViewModel
 import tarikdev.app.testproject.ui.second.adapter.CommentRVAdapter
@@ -27,6 +28,7 @@ class SecondScreenFragment : Fragment() {
     }
 
     private lateinit var viewModel: CommentsViewModel
+    private lateinit var adapter: CommentRVAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -38,48 +40,86 @@ class SecondScreenFragment : Fragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        val adapter = CommentRVAdapter()
-        comments_rv.layoutManager = LinearLayoutManager(context)
-        comments_rv.adapter = adapter
+        var isLoading: Boolean = false
+
 
         viewModel = ViewModelProvider(requireActivity()).get(CommentsViewModel::class.java)
-        viewModel.commentsResult.observe(viewLifecycleOwner, {
-            if (it.status == NetworkResult.Status.SUCCESS) {
-                Log.d(TAG, "commentsResult.observe: SUCCESS")
-                adapter.addComments(it.data!!)
+        viewModel.commentsResult.observe(viewLifecycleOwner, { response ->
+
+            isLoading = response.status == NetworkResult.Status.LOADING
+
+            if (response.status == NetworkResult.Status.SUCCESS) {
+                response.data?.let { comments ->
+                    if (!this::adapter.isInitialized) {
+
+                        Log.d(TAG, "commentsResult.observe: init adapter: " +
+                                "ids=[${comments.first().id},${comments.last().id}], " +
+                                "page[${viewModel.currentPage.value}][${viewModel.getPageCount()}]"
+                        )
+
+                        initAdapter(comments.toMutableList())
+
+                    } else {
+                        Log.d(TAG, "commentsResult.observe: add comments:" +
+                                "ids=[${comments.first().id},${comments.last().id}], " +
+                                "page[${viewModel.currentPage.value}][${viewModel.getPageCount()}]"
+                        )
+                        adapter.addComments(comments)
+                    }
+
+                }
             }
         })
 
-        var isLoading = true
+
+
+    }
+
+    private fun initAdapter(comments: MutableList<Comment>) {
+
+        adapter = CommentRVAdapter(comments)
+        comments_rv.layoutManager = LinearLayoutManager(context)
+        comments_rv.adapter = adapter
+
         val recyclerCallback = object : Paginate.Callbacks {
+
             override fun onLoadMore() {
-                Log.d(TAG, "onLoadMore: ")
-                isLoading = viewModel.getCommentsNextPage()
+                // Load next page of data (e.g. network or database)
+                viewModel.currentPage.value?.let {
+                    if (viewModel.getPageCount() != it) {
+                        val range = viewModel.getPageRange(it)
+                        Log.d(TAG, "recyclerCallback.onLoadMore: nextPage=$it, range[${range.first},${range.second}]")
+                        viewModel.getComments(it)
+                    }
+                }
             }
 
             override fun isLoading(): Boolean {
-                val isLastPage = viewModel.rangePages.lastIndex == viewModel.getCurrentPage()
-                Log.d(TAG, "isLoading: isLastPage=${!isLastPage}")
-                //return !isLastPage
-                return viewModel.getCommentsNextPage()
+                // Indicate whether new page loading is in progress or not
+                //Log.d(TAG, "recyclerCallback.isLoading: $isLoading")
+
+                return viewModel.getPageCount() == viewModel.currentPage.value
             }
 
             override fun hasLoadedAllItems(): Boolean {
                 // Indicate whether all data (pages) are loaded or not
-                val isLastPage = viewModel.rangePages.lastIndex == viewModel.getCurrentPage()
-                Log.d(TAG, "hasLoadedAllItems: isLastPage=$isLastPage")
-                return isLastPage
+                val isLoadedAllItems = adapter.comments.lastOrNull()?.id ?: 0 == viewModel.range.second
+                //val isLoadedAllItems = viewModel.getPageCount() == viewModel.currentPage.value
+                Log.d(
+                    TAG,
+                    "recyclerCallback.hasLoadedAllItems: $isLoadedAllItems, currentPage=${viewModel.currentPage.value}, allPages=${viewModel.getPageCount()}"
+                )
+                return isLoadedAllItems
             }
 
         }
 
-
         Paginate.with(comments_rv, recyclerCallback)
-            .setLoadingTriggerThreshold(2)
+            .setLoadingTriggerThreshold(1)
             .addLoadingListItem(true)
             .setLoadingListItemCreator(LoadingListItemCreator.DEFAULT)
             .build()
-
     }
+
 
 }
